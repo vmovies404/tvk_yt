@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Product Of• Vikki</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0b1a1e;
+      min-height: 100vh;
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      padding: 1.5rem;
+      background-image: radial-gradient(circle at 20% 30%, rgba(255, 215, 0, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 70%, rgba(200, 30, 30, 0.10) 0%, transparent 50%);
+    }
+    .tvk-card {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(16px);
+      border-radius: 48px;
+      padding: 2.5rem 2rem;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+      border: 2px solid #f5c542;
+      position: relative;
+    }
+    .tvk-card::before, .tvk-card::after {
+      content: '';
+      position: absolute;
+      left: 20%;
+      right: 20%;
+      height: 6px;
+      background: linear-gradient(90deg, #8b0000 0%, #8b0000 33%, #f5c542 33%, #f5c542 66%, #8b0000 66%, #8b0000 100%);
+      border-radius: 12px;
+    }
+    .tvk-card::before { top: -12px; }
+    .tvk-card::after { bottom: -12px; background: linear-gradient(90deg, #f5c542 0%, #f5c542 33%, #8b0000 33%, #8b0000 66%, #f5c542 66%, #f5c542 100%); }
+
+    .tvk-title h1 {
+      font-size: 2.8rem;
+      background: linear-gradient(135deg, #f5c542 20%, #ffdd77 80%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .tvk-input {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 2px solid #f5c542;
+      border-radius: 60px;
+      padding: 1rem 1.8rem;
+      font-size: 1.1rem;
+      color: #f5f0e0;
+      margin-bottom: 1.2rem;
+    }
+
+    .tvk-btn {
+      background: linear-gradient(145deg, #f5c542, #dba22e);
+      border: none;
+      border-radius: 60px;
+      padding: 1.1rem;
+      font-weight: 700;
+      font-size: 1.4rem;
+      color: #1a1e1b;
+      width: 100%;
+      cursor: pointer;
+      margin: 8px 0;
+    }
+
+    .format-btn {
+      background: rgba(245, 197, 66, 0.12);
+      border: 2px solid #f5c542;
+      border-radius: 40px;
+      padding: 1rem;
+      color: #f5e7c8;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="tvk-card">
+    <div class="tvk-title">
+      <h1>VETRI</h1>
+    </div>
+
+    <div id="loginPanel">
+      <input id="user" value="test" class="tvk-input" placeholder="Username">
+      <input id="pass" type="password" value="test" class="tvk-input" placeholder="Password">
+      <button onclick="handleLogin()" class="tvk-btn">உள் நுழை</button>
+    </div>
+
+    <div id="appPanel" class="hidden">
+      <input id="url" class="tvk-input" placeholder="YouTube URL ஐ ஒட்டவும்">
+      <button onclick="fetchVideoInfo()" class="tvk-btn">வீடியோ தகவல்</button>
+      <div id="result" class="hidden"></div>
+    </div>
+  </div>
+
+  <script>
+    let currentUrl = '';
+
+    async function handleLogin() {
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username: document.getElementById('user').value, password: document.getElementById('pass').value})
+      });
+      if ((await res.json()).success) {
+        document.getElementById('loginPanel').classList.add('hidden');
+        document.getElementById('appPanel').classList.remove('hidden');
+      }
+    }
+
+    async function fetchVideoInfo() {
+      currentUrl = document.getElementById('url').value.trim();
+      const res = await fetch(`/info?url=${encodeURIComponent(currentUrl)}`);
+      const data = await res.json();
+      if (data.error) return alert(data.error);
+
+      let html = `<h3 style="margin: 1rem 0; color:#f5c542;">${data.title}</h3>
+                  <img src="${data.thumbnail}" style="width:100%; border-radius:20px; border:3px solid #f5c542;">`;
+      html += `<div style="margin-top:1.5rem;" id="formats"></div>`;
+      document.getElementById('result').innerHTML = html;
+      document.getElementById('result').classList.remove('hidden');
+
+      const container = document.getElementById('formats');
+      data.formats.filter(f => f.hasVideo).forEach(f => {
+        const btn = document.createElement('div');
+        btn.className = 'format-btn';
+        btn.innerHTML = `<strong>${f.quality}</strong><br><small>${f.container} • ${f.size}</small>`;
+        btn.onclick = () => download(f.itag, 'video');
+        container.appendChild(btn);
+      });
+    }
+
+    function download(itag, type) {
+      let url = `/download?url=${encodeURIComponent(currentUrl)}&format=${type}`;
+      if (itag) url += `&itag=${itag}`;
+      window.location.href = url;
+    }
+  </script>
+</body>
+</html>
