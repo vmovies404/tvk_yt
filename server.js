@@ -3,6 +3,7 @@ const ytdl = require('@distube/ytdl-core');
 const session = require('express-session');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -58,7 +59,7 @@ app.get('/info', isAuthenticated, async (req, res) => {
   }
 });
 
-// Download
+// Download with cookies support
 app.get('/download', isAuthenticated, (req, res) => {
   try {
     const { url, itag, format } = req.query;
@@ -68,12 +69,21 @@ app.get('/download', isAuthenticated, (req, res) => {
       options = { filter: 'audioonly', quality: 'highestaudio' };
     }
 
+    // Add cookies if file exists
+    if (fs.existsSync('cookies.txt')) {
+      options.requestOptions = {
+        headers: {
+          Cookie: fs.readFileSync('cookies.txt', 'utf8')
+        }
+      };
+    }
+
     const stream = ytdl(url, options);
     ytdl.getInfo(url).then(info => {
       const title = info.videoDetails.title.replace(/[^a-zA-Z0-9]/g, '_');
       const ext = format === 'audio' ? 'mp3' : 'mp4';
       res.header('Content-Disposition', `attachment; filename="${title}.${ext}"`);
-    });
+    }).catch(() => {});
 
     stream.pipe(res);
   } catch (e) {
