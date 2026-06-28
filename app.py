@@ -4,7 +4,6 @@ import os
 
 app = Flask(__name__)
 
-# Your exact HTML
 HTML = '''<!DOCTYPE html>
 <html lang="en">
 <head>
