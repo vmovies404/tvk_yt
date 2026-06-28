@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file, render_template_string
+from flask import Flask, request, send_file, render_template_string, jsonify
 import yt_dlp
 import os
 
@@ -265,28 +265,38 @@ def login():
 @app.route('/info')
 def info():
   url = request.args.get('url')
-  ydl_opts = {'quiet': True}
-  with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-    info = ydl.extract_info(url, download=False)
-  return {'title': info['title'], 'thumbnail': info.get('thumbnail', ''), 'formats': []}
+  if not url:
+    return {'error': 'No URL'}, 400
+  try:
+    ydl_opts = {'quiet': True}
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+      info = ydl.extract_info(url, download=False)
+    return {'title': info.get('title', 'Unknown'), 'thumbnail': info.get('thumbnail', ''), 'formats': []}
+  except Exception as e:
+    return {'error': str(e)}, 500
 
 @app.route('/download')
 def download():
   url = request.args.get('url')
   type_ = request.args.get('type', 'video')
-  ydl_opts = {
-    'outtmpl': 'downloads/%(title)s.%(ext)s',
-  }
-  if type_ == 'audio':
-    ydl_opts['format'] = 'bestaudio/best'
-    ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}]
-  else:
-    ydl_opts['format'] = 'bestvideo+bestaudio/best'
+  if not url:
+    return 'No URL', 400
+  try:
+    ydl_opts = {
+      'outtmpl': 'downloads/%(title)s.%(ext)s',
+    }
+    if type_ == 'audio':
+      ydl_opts['format'] = 'bestaudio/best'
+      ydl_opts['postprocessors'] = [{'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3'}]
+    else:
+      ydl_opts['format'] = 'bestvideo+bestaudio/best'
 
-  with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-    info = ydl.extract_info(url, download=True)
-    filename = ydl.prepare_filename(info)
-  return send_file(filename, as_attachment=True)
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+      info = ydl.extract_info(url, download=True)
+      filename = ydl.prepare_filename(info)
+    return send_file(filename, as_attachment=True)
+  except Exception as e:
+    return str(e), 500
 
 if __name__ == '__main__':
   os.makedirs('downloads', exist_ok=True)
